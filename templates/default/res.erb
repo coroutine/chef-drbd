@@ -5,7 +5,7 @@ resource <%= @resource %> {
   disk      <%= node['drbd']['disk'] %>;
   meta-disk internal;
   on <%= node.name.split('.')[0] %> {
-    address   <%= node.ipaddress %>:<%= node['drbd']['port'] %>;
+    address   <%= @internal_ip %>:<%= node['drbd']['port'] %>;
   }
   on <%= node['drbd']['remote_host'].split('.')[0] %> {
     address   <%= @remote_ip %>:<%= node['drbd']['port'] %>;

@@ -22,23 +22,43 @@ require 'chef/shell_out'
 
 include_recipe "drbd"
 
-resource = "pair"
+resource = node['drbd']['resource'] || "pair"
 
-if node['drbd']['remote_host'].nil?
-  Chef::Application.fatal! "You must have a ['drbd']['remote_host'] defined to use the drbd::pair recipe."
+if node['drbd']['remote_host'].nil? || node['drbd']['remote_ip'].nil?
+  Chef::Application.fatal! "You must define a ['drbd']['remote_host'] and a ['drbd']['remote_ip'] to use the drbd::pair recipe."
 end
 
-remote = search(:node, "name:#{node['drbd']['remote_host']}")[0]
+if node['drbd']['remote_host']
+  remote = search(:node, "name:#{node['drbd']['remote_host']}")[0]
+end
 
 template "/etc/drbd.d/#{resource}.res" do
   source "res.erb"
   variables(
     :resource => resource,
-    :remote_ip => remote.ipaddress
-    )
+    :remote_ip => node['drbd']['remote_ip'] || remote.ipaddress,
+    :internal_ip => node['drbd']['internal_ip'] || node.ipaddress
+  )
   owner "root"
   group "root"
   action :create
+end
+
+template "/etc/drbd.d/global_common.conf" do
+  source "global_common.conf.erb"
+  variables(
+    :usage_count => node['drbd']['usage_count'],
+    :protocol => node['drbd']['protocol'],
+    :rate => node['drbd']['sync_rate']
+  )
+  owner "root"
+  group "root"
+  action :create
+end
+
+# Make sure drbd is running
+service "drbd" do
+  action [:enable, :start]
 end
 
 #first pass only, initialize drbd
